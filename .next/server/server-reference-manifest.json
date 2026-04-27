@@ -1,0 +1,14 @@
+{
+  "node": {
+    "3a28a18903c20210227967bab08f2d3e970ed3d8": {
+      "workers": {
+        "app/(app)/dashboard/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpippofaggi%2Fauto01%2Ffleetpro2%2Fapp%2F(app)%2Fdashboard%2Fpage.tsx%22%2C%5B%22default%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/(app)/dashboard/page": "rsc"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "+FzTbRg52JAT6l4gbEFq1LgyW6bgvfRRs/Gj/s0oKGA="
+}
