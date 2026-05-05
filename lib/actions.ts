@@ -11,8 +11,8 @@ function serverSupabase() {
 }
 
 export async function saveVehicleAction(formData: FormData) {
-  const sb  = serverSupabase()
-  const id  = formData.get('id') as string | null
+  const sb = serverSupabase()
+  const id = formData.get('id') as string | null
 
   const payload = {
     targa:          (formData.get('targa') as string).toUpperCase().trim(),
@@ -35,8 +35,12 @@ export async function saveVehicleAction(formData: FormData) {
     immatricolazione:      (formData.get('immatricolazione') as string)   || null,
     km_contratto:          formData.get('km_contratto') ? Number(formData.get('km_contratto')) : null,
     data_fine_contratto:   (formData.get('data_fine_contratto') as string) || null,
-    note:                  (formData.get('note') as string) || null,
-    attivo:                true,
+    // contratto_path: incluso solo se presente (upload separato o passato esplicitamente)
+    ...(formData.get('contratto_path')
+      ? { contratto_path: formData.get('contratto_path') as string }
+      : {}),
+    note:   (formData.get('note') as string) || null,
+    attivo: true,
   }
 
   if (id) {
@@ -56,6 +60,24 @@ export async function deleteVehicleAction(id: string) {
   const sb = serverSupabase()
   const { error } = await sb.from('vehicles').update({ attivo: false }).eq('id', id)
   if (error) return { error: error.message }
+  revalidatePath('/flotta')
+  return { success: true }
+}
+
+/**
+ * Aggiorna solo il campo contratto_path su un veicolo esistente.
+ * Viene chiamato dopo un upload riuscito dal client.
+ */
+export async function updateContrattoPathAction(vehicleId: string, contrattoPath: string) {
+  const sb = serverSupabase()
+  const { error } = await sb
+    .from('vehicles')
+    .update({ contratto_path: contrattoPath })
+    .eq('id', vehicleId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/flotta/${vehicleId}`)
   revalidatePath('/flotta')
   return { success: true }
 }
