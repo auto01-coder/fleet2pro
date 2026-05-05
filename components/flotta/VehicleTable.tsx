@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import type { VehicleProfit } from '@/lib/types'
-import { euro, alertLevel, ALERT_COLOR } from '@/lib/utils'
+import { euro, euroSigned, alertLevel, ALERT_COLOR } from '@/lib/utils'
 import { Badge, ProgressBar, EmptyState } from '@/components/ui'
 
 type FilterKey = 'tutti' | 'leasing' | 'nlt' | 'proprieta' | 'perdita' | 'scadenza'
@@ -19,7 +19,7 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
     nlt:       vehicles.filter(v => v.tipologia === 'nlt').length,
     proprieta: vehicles.filter(v => v.tipologia === 'proprieta').length,
     perdita:   vehicles.filter(v => v.in_perdita).length,
-    scadenza:  vehicles.filter(v => (v as any).prossima_scadenza_giorni !== null && (v as any).prossima_scadenza_giorni <= 30).length,
+    scadenza:  vehicles.filter(v => v.prossima_scadenza_giorni !== null && v.prossima_scadenza_giorni <= 30).length,
   }
 
   const FILTERS: { key: FilterKey; label: string }[] = [
@@ -46,11 +46,11 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
       case 'nlt':       r = r.filter(v => v.tipologia === 'nlt'); break
       case 'proprieta': r = r.filter(v => v.tipologia === 'proprieta'); break
       case 'perdita':   r = r.filter(v => v.in_perdita); break
-      case 'scadenza':  r = r.filter(v => (v as any).prossima_scadenza_giorni !== null && (v as any).prossima_scadenza_giorni <= 30); break
+      case 'scadenza':  r = r.filter(v => v.prossima_scadenza_giorni !== null && v.prossima_scadenza_giorni <= 30); break
     }
     r.sort((a, b) => {
-      const av = (a as unknown as Record<string, unknown>)[sortKey] ?? ''
-      const bv = (b as unknown as Record<string, unknown>)[sortKey] ?? ''
+      const av = (a as Record<string, unknown>)[sortKey] ?? ''
+      const bv = (b as Record<string, unknown>)[sortKey] ?? ''
       const cmp = typeof av === 'number'
         ? (av as number) - (bv as number)
         : String(av).localeCompare(String(bv), 'it-IT')
@@ -125,24 +125,21 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/70">
                 {[
-                  { k: 'targa',              l: 'Targa'          },
-                  { k: 'modello',            l: 'Veicolo'        },
-                  { k: 'tipologia',          l: 'Tipo'           },
-                  { k: 'stato',              l: 'Stato'          },
-                  { k: null,                 l: 'Scadenza'       },
-                  { k: 'km_percentuale',     l: 'KM'             },
-                  { k: 'spesa_giorno',       l: 'Spesa/g'        },
-                  { k: 'incasso_giorno',     l: 'Incasso/g'      },
-                  { k: 'differenza_giorno',  l: 'Δ/g'            },
-                  { k: 'spesa_mese',         l: 'Spesa/mese'     },
-                  { k: 'incasso_mese',       l: 'Incasso/mese'   },
-                  { k: 'differenza_mese',    l: 'Δ/mese'         },
-                  { k: null,                 l: ''               },
+                  { k: 'targa',            l: 'Targa'        },
+                  { k: 'modello',          l: 'Veicolo'      },
+                  { k: 'tipologia',        l: 'Tipo'         },
+                  { k: 'stato',            l: 'Stato'        },
+                  { k: null,               l: 'Scadenza'     },
+                  { k: 'km_percentuale',   l: 'KM'          },
+                  { k: 'costo_giornaliero',l: '€/giorno'    },
+                  { k: 'margine_mensile',  l: 'Margine/mese' },
+                  { k: null,               l: ''             },
                 ].map((col, i) => (
                   <th
                     key={i}
                     onClick={() => col.k && toggleSort(col.k)}
-                    className={`whitespace-nowrap px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 ${col.k ? 'cursor-pointer hover:text-slate-600 select-none' : ''}`}>
+                    className={`whitespace-nowrap px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 ${col.k ? 'cursor-pointer hover:text-slate-600 select-none' : ''}`}
+                  >
                     {col.l}
                     {col.k && sortKey === col.k && (
                       <span className="ml-1 text-slate-600">{sortDir === 'asc' ? '↑' : '↓'}</span>
@@ -154,23 +151,16 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13}>
+                  <td colSpan={9}>
                     <EmptyState icon="🚗" title="Nessun veicolo trovato" description="Prova a cambiare i filtri o la ricerca" />
                   </td>
                 </tr>
               ) : filtered.map(v => {
                 const ts = tipologiaStyle[v.tipologia] ?? { variant: 'gray' as const, label: v.tipologia }
                 const ss = statoStyle[v.stato] ?? 'gray'
-                const scadGG = (v as any).prossima_scadenza_giorni ?? (v as any).giorniContratto ?? null
+                const scadGG = v.prossima_scadenza_giorni
                 const scadAlert = alertLevel(scadGG)
                 const km = v.km_percentuale
-
-                const spesaG = (v as any).spesaGiorno ?? (v as any).spesa_giorno ?? (v as any).costoGiorno ?? (v as any).costo_giornaliero ?? 0
-                const incassoG = (v as any).incassoGiorno ?? (v as any).incasso_giorno ?? (v as any).ricavoGiorno ?? (v as any).ricavo_giornaliero ?? 0
-                const diffG = (v as any).differenzaGiorno ?? (v as any).differenza_giorno ?? (v as any).margineGiorno ?? (v as any).margine_giornaliero ?? 0
-                const spesaM = (v as any).spesaMese ?? (v as any).spesa_mese ?? (v as any).costoMensile ?? (v as any).costo_totale_mensile ?? 0
-                const incassoM = (v as any).incassoMese ?? (v as any).incasso_mese ?? (v as any).ricavoMensile ?? (v as any).ricavo_mensile ?? 0
-                const diffM = (v as any).differenzaMese ?? (v as any).differenza_mese ?? (v as any).margineMensile ?? (v as any).margine_mensile ?? 0
 
                 return (
                   <tr
@@ -180,12 +170,8 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
                   >
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        {diffG < 0 ? (
-                          <Badge variant="red">Perde soldi</Badge>
-                        ) : diffG > 0 ? (
-                          <Badge variant="green">Profitto</Badge>
-                        ) : null}
-                        <span className="font-mono text-sm font-bold text-slate-900">{v.targa}</span>
+                        {v.in_perdita && <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />}
+                        <span className="font-mono text-xs font-bold text-slate-900">{v.targa}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
@@ -216,31 +202,16 @@ export default function VehicleTable({ vehicles }: { vehicles: VehicleProfit[] }
                         </div>
                       ) : <span className="text-slate-300 text-xs">—</span>}
                     </td>
-
-                    <td className="px-4 py-3.5 font-mono text-sm font-bold text-slate-900">
-                      {euro(spesaG)}
-                    </td>
-                    <td className="px-4 py-3.5 font-mono text-sm font-bold text-slate-900">
-                      {incassoG > 0 ? euro(incassoG) : <span className="text-slate-300">—</span>}
+                    <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-700">
+                      {euro(v.costo_giornaliero)}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`font-mono text-sm font-bold ${diffG >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {diffG >= 0 ? '+' : '−'}{euro(Math.abs(diffG))}
-                      </span>
+                      {v.prezzo_mensile_cliente ? (
+                        <span className={`font-mono text-xs font-bold ${v.margine_mensile >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {euroSigned(v.margine_mensile, 0)}
+                        </span>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
                     </td>
-
-                    <td className="px-4 py-3.5 font-mono text-sm font-bold text-slate-900">
-                      {euro(spesaM)}
-                    </td>
-                    <td className="px-4 py-3.5 font-mono text-sm font-bold text-slate-900">
-                      {incassoM > 0 ? euro(incassoM) : <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`font-mono text-sm font-bold ${diffM >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {diffM >= 0 ? '+' : '−'}{euro(Math.abs(diffM))}
-                      </span>
-                    </td>
-
                     <td className="px-4 py-3.5 text-right">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-slate-200 group-hover:text-slate-400 ml-auto transition-colors">
                         <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
