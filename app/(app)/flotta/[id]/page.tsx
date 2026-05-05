@@ -6,6 +6,7 @@ import { euro, euroSigned, shortDate, ALERT_COLOR, alertLevel } from '@/lib/util
 import type { VehicleProfit } from '@/lib/types'
 import { Card, Badge, Button, ProgressBar, Modal } from '@/components/ui'
 import Link from 'next/link'
+import { getContrattoSignedUrl } from '@/components/flotta/VehicleForm'
 
 function ScadenzaRow({ label, giorni, icon }: { label: string; giorni: number | null; icon: string }) {
   if (giorni === null) return null
@@ -23,6 +24,61 @@ function ScadenzaRow({ label, giorni, icon }: { label: string; giorni: number | 
   )
 }
 
+
+// ── Bottone Contratto ─────────────────────────────────────────────
+function ContrattoButton({ path, loading, onClick }: {
+  path: string | null | undefined
+  loading: boolean
+  onClick: () => void
+}) {
+  if (!path) {
+    return (
+      <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 flex-shrink-0">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 1h6l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="#94a3b8" strokeWidth="1.2" fill="none"/>
+            <path d="M9 1v3h3" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-slate-500">Contratto veicolo</p>
+          <p className="text-[10px] text-slate-400">Nessun contratto caricato</p>
+        </div>
+        <span className="ml-auto text-[10px] text-slate-300 italic">—</span>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className="group w-full flex items-center gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-all disabled:opacity-60 disabled:pointer-events-none text-left"
+    >
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 flex-shrink-0">
+        {loading ? (
+          <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 1h6l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" fill="#dbeafe" stroke="#93c5fd" strokeWidth="1.2"/>
+            <path d="M9 1v3h3" stroke="#93c5fd" strokeWidth="1.2" strokeLinecap="round"/>
+            <path d="M4 7h6M4 9.5h6M4 12h4" stroke="#60a5fa" strokeWidth="1" strokeLinecap="round"/>
+          </svg>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-blue-700">Visualizza contratto</p>
+        <p className="text-[10px] text-blue-500 truncate">Apri documento · valido 60 secondi</p>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-blue-400 group-hover:text-blue-600 flex-shrink-0 transition-colors">
+        <path d="M1 7s2.5-5 6-5 6 5 6 5-2.5 5-6 5-6-5-6-5z" stroke="currentColor" strokeWidth="1.2"/>
+        <circle cx="7" cy="7" r="2" fill="currentColor"/>
+      </svg>
+    </button>
+  )
+}
+
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
@@ -30,6 +86,7 @@ export default function VehicleDetailPage() {
   const [loading, setLoading]       = useState(true)
   const [delModal, setDelModal]     = useState(false)
   const [deleting, setDeleting]     = useState(false)
+  const [contrattoLoading, setContrattoLoading] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -45,6 +102,18 @@ export default function VehicleDetailPage() {
     setDeleting(true)
     await deleteVehicle(vehicle.id)
     router.push('/flotta')
+  }
+
+  async function handleViewContratto() {
+    if (!vehicle?.contratto_path) return
+    setContrattoLoading(true)
+    const url = await getContrattoSignedUrl(vehicle.contratto_path)
+    setContrattoLoading(false)
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert('Impossibile aprire il contratto. Riprova.')
+    }
   }
 
   if (loading) {
@@ -229,6 +298,15 @@ export default function VehicleDetailPage() {
                     <span className="font-medium text-slate-700">{r.v}</span>
                   </div>
                 ))}
+
+                {/* Documento contratto */}
+                <div className="pt-2">
+                  <ContrattoButton
+                    path={vehicle.contratto_path}
+                    loading={contrattoLoading}
+                    onClick={handleViewContratto}
+                  />
+                </div>
               </div>
             </Card>
           </div>
