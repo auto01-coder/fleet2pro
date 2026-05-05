@@ -17,7 +17,6 @@ export interface Vehicle {
   stato: VehicleStato
   costo_mensile: number          // IVA esclusa
   prezzo_mensile_cliente?: number | null
-  prezzo_giorno?: number | null
   costo_assicurazione?: number | null
   costo_bollo?: number | null
   costo_manutenzione?: number | null
@@ -28,6 +27,7 @@ export interface Vehicle {
   immatricolazione?: string | null
   km_contratto?: number | null
   data_fine_contratto?: string | null
+  contratto_path?: string | null  // path privato in Storage bucket 'documenti'
   note?: string | null
   attivo: boolean
   created_at: string
@@ -41,13 +41,6 @@ export interface VehicleProfit extends Vehicle {
   margine_giornaliero: number
   margine_mensile: number
   margine_annuale: number
-  // New UI-friendly daily/monthly fields
-  spesaGiorno?: number
-  incassoGiorno?: number
-  differenzaGiorno?: number
-  spesaMese?: number
-  incassoMese?: number
-  differenzaMese?: number
   in_perdita: boolean
   km_percentuale: number | null
   // Scadenze
@@ -59,19 +52,11 @@ export interface VehicleProfit extends Vehicle {
 }
 
 export interface CashFlowMese {
-  // Short month name, e.g. 'Apr'
-  mese: string
-  // Four-digit year, e.g. 2026
-  anno: number
-  // Human label, e.g. 'Apr 2026'
-  label: string
-  // Monthly totals
-  costo: number
-  ricavo: number
-  margine: number
-  // Backwards-compatible keys used by existing charts
+  mese: string   // 'YYYY-MM'
+  label: string  // 'Gen 2025'
   costi: number
   ricavi: number
+  margine: number
 }
 
 export interface DashboardKpi {
